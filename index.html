@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Equation Grapher</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 0px auto;
+      padding: 10px;
+      background: #f7f7f7;
+      transition: background 0.3s, color 0.3s;
+    }
+    body.dark {
+      background: #1e1e1e;
+      color: #e6e6e6;
+    }
+    h1 {
+      text-align: center;
+      color: #1a73e8;
+    }
+    body.dark h1 {
+      color: #4da3ff;
+    }
+    #container {
+      background: white;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      transition: background 0.3s, color 0.3s;
+    }
+    body.dark #container {
+      background: #2b2b2b;
+      color: #e6e6e6;
+    }
+
+    /* Layout: equations center, examples clearly on the right */
+    #top-row {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    #equation-area {
+      flex: 1;
+      text-align: center;
+    }
+
+    .eq-row {
+      margin-bottom: 10px;
+    }
+
+    .eq-label {
+      font-weight: bold;
+      margin-right: 5px;
+      display: inline-block;
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .eq-row input {
+      padding: 8px;
+      width: 460px;
+      font-size: 20spx;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+      color: black;
+      display: inline-block;
+    }
+
+    body.dark .eq-row input {
+      background: #3a3a3a;
+      color: #e6e6e6;
+      border: 1px solid #666;
+    }
+
+    button {
+      padding: 8px 15px;
+      font-size:16px;
+      cursor: pointer;
+      margin: 10px 5px;
+      background: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+    button:hover {
+      background: #1664c4;
+    }
+
+    #examples-area {
+      font-size: 13px;
+      width: 60px;
+      opacity: 0.9;
+      margin-left: 00px;
+    }
+    #examples-area h4 {
+      margin-top: 0;
+      color: #1a73e8;
+    }
+    body.dark #examples-area h4 {
+      color: #4da3ff;
+    }
+    .example-btn {
+      margin: 1px 0;
+      padding: 3px 6px;
+      cursor: pointer;
+      background: #555454;
+      border: none;
+      border-radius: 5px;
+      font-size: 12px;
+    }
+    body.dark .example-btn {
+      background: #555;
+      color: white;
+    }
+
+    #range-box {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 6px;
+      background: #eef5ff;
+      text-align: center;
+    }
+    body.dark #range-box {
+      background: #333;
+    }
+
+    #visit-counter {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 13px;
+      opacity: 0.7;
+    }
+
+    #error {
+      color: red;
+      font-weight: bold;
+      min-height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Equation Grapher</h1>
+
+  <div id="container">
+    <div id="top-row">
+      <!-- Centered equations, label on the left of box -->
+      <div id="equation-area">
+        <h3 style="color:#1a73e8;">Insert Your Equations:</h3>
+        <div id="equation-list"></div>
+        <button onclick="addEquation()">Add another equation</button>
+        <button onclick="plotGraph()">Plot</button>
+        <button onclick="toggleDarkMode()">Dark Mode</button>
+        <p id="error"></p>
+      </div>
+
+      <!-- Examples clearly on the right -->
+      <div id="examples-area">
+        <h4>Examples:</h4>
+        <button class="example-btn" onclick="loadExample(['sin(x)'])">sin(x)</button><br>
+        <button class="example-btn" onclick="loadExample(['x^2'])">x²</button><br>
+        <button class="example-btn" onclick="loadExample(['tan(x)'])">tan(x)</button><br>
+        <button class="example-btn" onclick="loadExample(['cos(x)'])">cos(x)</button><br>
+        <button class="example-btn" onclick="loadExample(['e^(x)*sin(5x)'])">e^(x)*sin(5x)</button><br>
+        <button class="example-btn" onclick="loadExample(['log(x)'])">log(x)</button><br>
+        <button class="example-btn" onclick="loadExample(['1/x'])">1/x</button><br>
+        <button class="example-btn" onclick="loadExample(['sin(x)*cos(x)'])">sin(x)*cos(x)</button><br>
+      </div>
+    </div>
+
+    <!-- Custom range centered -->
+    <div id="range-box">
+      <strong>Custom Range:</strong><br><br>
+      Xmin: <input id="xmin" type="number" value="-10" oninput="debouncedPlot()" style="width:80px;">
+      Xmax: <input id="xmax" type="number" value="10" oninput="debouncedPlot()" style="width:80px;">
+      &nbsp;&nbsp;&nbsp;
+      Ymin: <input id="ymin" type="number" value="-10" oninput="debouncedPlot()" style="width:80px;">
+      Ymax: <input id="ymax" type="number" value="10" oninput="debouncedPlot()" style="width:80px;">
+    </div>
+
+    <div id="graph" style="width: 100%; height: 450px; margin-top: 10px;"></div>
+  </div>
+
+  <div id="visit-counter"></div>
+
+  <script>
+    let equationCount = 0;
+    let rangeTimer = null;
+    const colors = ["red", "blue", "green", "purple", "orange", "brown"];
+
+    function debouncedPlot() {
+      clearTimeout(rangeTimer);
+      rangeTimer = setTimeout(plotGraph, 200);
+    }
+
+function toggleDarkMode() {
+  document.body.classList.toggle("dark");
+  const btn = document.querySelector('button[onclick="toggleDarkMode()"]');
+  btn.textContent = document.body.classList.contains("dark") ? "Light Mode" : "Dark Mode";
+    }
+
+    function addEquation(value = "") {
+      equationCount++;
+      const container = document.getElementById("equation-list");
+      const row = document.createElement("div");
+      row.className = "eq-row";
+      row.id = "eq-row-" + equationCount;
+      row.innerHTML = `
+        <span class="eq-label">y${equationCount} =</span>
+        <input type="text" id="eq${equationCount}" value="${value}">
+      `;
+      container.appendChild(row);
+
+      const input = document.getElementById("eq" + equationCount);
+      const thisIndex = equationCount;
+
+      input.addEventListener("keydown", function(e) {
+        if (e.key === "Tab") {
+          e.preventDefault();
+          plotGraph();
+          let next = document.getElementById("eq" + (thisIndex + 1));
+          if (!next) {
+            addEquation("");
+            next = document.getElementById("eq" + (thisIndex + 1));
+          }
+          next.focus();
+        }
+        if (e.key === "Enter") {
+          plotGraph();
+        }
+      });
+    }
+
+    function cleanEmptyEquations() {
+      const list = document.getElementById("equation-list");
+      const rows = Array.from(list.children);
+
+      rows.forEach((row, index) => {
+        const input = row.querySelector("input");
+        if (index === 0) return; // keep first always
+        if (input.value.trim() === "") row.remove();
+      });
+
+      const remaining = Array.from(list.children);
+      equationCount = remaining.length;
+
+      remaining.forEach((row, index) => {
+        const newIndex = index + 1;
+        row.id = "eq-row-" + newIndex;
+        row.querySelector(".eq-label").textContent = "y" + newIndex + " =";
+        row.querySelector("input").id = "eq" + newIndex;
+      });
+
+      if (equationCount === 0) {
+        equationCount = 0;
+        addEquation("");
+      }
+    }
+
+    function loadExample(list) {
+      const listContainer = document.getElementById("equation-list");
+      listContainer.innerHTML = "";
+      equationCount = 0;
+      list.forEach(eq => addEquation(eq));
+      plotGraph();
+    }
+
+    function plotGraph() {
+      cleanEmptyEquations();
+
+      const xmin = parseFloat(document.getElementById("xmin").value);
+      const xmax = parseFloat(document.getElementById("xmax").value);
+      const ymin = parseFloat(document.getElementById("ymin").value);
+      const ymax = parseFloat(document.getElementById("ymax").value);
+
+      const data = [];
+
+      try {
+        for (let i = 1; i <= equationCount; i++) {
+          const eqInput = document.getElementById("eq" + i);
+          if (!eqInput) continue;
+
+          const eq = eqInput.value.trim();
+          if (eq === "") continue;
+
+          const xValues = [];
+          const yValues = [];
+
+          const step = (xmax - xmin) / 400 || 1;
+
+          for (let x = xmin; x <= xmax; x += step) {
+            xValues.push(x);
+            const y = math.evaluate(eq, { x });
+            yValues.push(y);
+          }
+
+          data.push({
+            x: xValues,
+            y: yValues,
+            type: "scatter",
+            name: "y" + i + " = " + eq,
+            line: { color: colors[(i - 1) % colors.length], width: 2 }
+          });
+        }
+
+        Plotly.newPlot(
+          "graph",
+          data,
+          {
+            xaxis: {
+              title: { text: "" },
+              side: "bottom",
+              range: [xmin, xmax],
+              showline: true,
+              mirror: true
+            },
+            yaxis: {
+              title: { text: "Y" },
+              side: "left",
+              range: [ymin, ymax],
+              showline: true,
+              mirror: true
+            }
+          },
+          {
+            displayModeBar: "static"
+          }
+        );
+
+        document.getElementById("error").innerText = "";
+      } catch (err) {
+        document.getElementById("error").innerText =
+          "Invalid equation. Try: sin(x), x^2, tan(x), cos(x)";
+      }
+    }
+
+    function updateVisitCounter() {
+      let count = localStorage.getItem("visitCount") || 0;
+      count++;
+      localStorage.setItem("visitCount", count);
+      document.getElementById("visit-counter").innerText = "Visits: " + count;
+    }
+
+    updateVisitCounter();
+    addEquation("");
+    plotGraph();
+  </script>
+</body>
+</html>
